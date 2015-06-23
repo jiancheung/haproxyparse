@@ -34,37 +34,43 @@ type HAProxyLogLine struct {
 	Retries             string
 	ServerQueue         string
 	BackendQueue        string
+	XForward            string
+	UserAgent           string
 	AuthHeader          string
-	ResponseHeaders     string
 	HttpMethod          string
 	HttpUri             string
 	UriComplete         bool
 	Time                time.Time
 }
 
+//http://blog.haproxy.com/2012/10/29/haproxy-log-customization/
 var LogLineRegex = regexp.MustCompile(
 	`^.*haproxy\[(?P<pid>\d+)\]:\s` +
-		`(?P<clientip>\d+\.\d+\.\d+\.\d+):` +
-		`(?P<clientport>\d+)\s` +
-		`\[(?P<date>\S+)\]\s` +
-		`(?P<frontend>\S+)\s` +
-		`(?P<backend>\S+)\/(?P<server>\S+)\s` +
-		`(?P<timesend>[\d-]+)\/(?P<timewait>[\d-]+)\/(?P<timeconnection>[\d-]+)\/(?P<timeresponse>[\d-]+)\/(?P<timetotal>[\d-]+)\s` +
-		`(?P<statuscode>[\d-]+)\s` +
-		`(?P<bytesread>\d+)\s` +
-		`(?P<requestcookie>\S+)\s(?P<responsecookie>\S+)\s` +
-		`(?P<terminationstate>\S+)\s` +
-		`(?P<activeconnections>\d+)\/(?P<frontendconnections>\d+)\/(?P<backendconnections>\d+)\/(?P<serverconnections>\d+)\/(?P<retries>\d+)\s` +
-		`(?P<serverqueue>\d+)\/(?P<backendqueue>\d+)\s` +
-		`(\{[^|]*\|[^|]*\|(?P<authheader>.*?)\}\s\{(?P<responseheaders>.*)\}\s){0,1}` +
-		`\"(?P<httpmethod>\w+)\s(?P<httpuri>\S+)(\s(?P<httpprotocol>\S+)\")?$`)
+		`(?P<clientip>\d+\.\d+\.\d+\.\d+)\s` + //%Ci
+		`-\s-\s` +
+		`\[(?P<date>\S+\s\S+)\]\s` + // [%t]
+		`\"(?P<httpmethod>\w+)\s(?P<httpuri>\S+)(\s(?P<httpprotocol>\S+)\")?\s` + //%r
+		`(?P<statuscode>[\d-]+)\s` + //%st
+		`(?P<bytesread>\d+)\s` + //%B
+		`""\s""\s` +
+		`(?P<clientport>\d+)\s` + //%Cp
+		`(?P<milliseconds>\d+)\s` + //%ms
+		`"(?P<frontend>\S*?)"\s` + //%ft
+		`"(?P<backend>\S*?)"\s` + //%b
+		`"(?P<server>\S*?)"\s` + //%s
+		`(?P<timesend>[\d-]+)\s(?P<timewait>[\d-]+)\s(?P<timeconnection>[\d-]+)\s(?P<timeresponse>[\d-]+)\s(?P<timetotal>[\d-]+)\s` + //%Tq %Tw %Tc %Tr %Tt
+		`(?P<terminationstate>\S+)\s` + //%tsc
+		`(?P<activeconnections>\d+)\s(?P<frontendconnections>\d+)\s(?P<backendconnections>\d+)\s(?P<serverconnections>\d+)\s(?P<retries>\d+)\s` + //%ac %fc %bc %sc %rc
+		`(?P<serverqueue>\d+)\s(?P<backendqueue>\d+)\s` + //%sq %bq
+		`"(?P<requestcookie>\S*?)"\s"(?P<responsecookie>\S*?)"\s` + //%cc %cs
+		`"(?P<xforward>.*?)"\s"(?P<useragent>.*?)"\s"(?P<authheader>.*?)"` + // custom
+		`$`)
 
-const DateFormat = "02/Jan/2006:15:04:05.000"
+const DateFormat = "02/Jan/2006:15:04:05 -0700"
 
 func parseLine(logLine string) (HAProxyLogLine, error) {
 	matches := getMatchedSubexpr(LogLineRegex, logLine)
 	parsed := HAProxyLogLine{}
-
 	// gotta be an easier way...
 	parsed.ProcessId = valOrEmpty(matches, "pid")
 	parsed.ClientIp = valOrEmpty(matches, "clientip")
@@ -90,8 +96,9 @@ func parseLine(logLine string) (HAProxyLogLine, error) {
 	parsed.Retries = valOrEmpty(matches, "retries")
 	parsed.ServerQueue = valOrEmpty(matches, "serverqueue")
 	parsed.BackendQueue = valOrEmpty(matches, "backendqueue")
+	parsed.XForward = valOrEmpty(matches, "xforward")
+	parsed.UserAgent = valOrEmpty(matches, "useragent")
 	parsed.AuthHeader = valOrEmpty(matches, "authheader")
-	parsed.ResponseHeaders = valOrEmpty(matches, "responseheaders")
 	parsed.HttpMethod = valOrEmpty(matches, "httpmethod")
 	parsed.HttpUri = valOrEmpty(matches, "httpuri")
 	// if we got the http protocol, then the uri was complete,
@@ -128,6 +135,7 @@ func getMatchedSubexpr(re *regexp.Regexp, toMatch string) map[string]string {
 	results := map[string]string{}
 	matches := re.FindStringSubmatch(toMatch)
 	if matches == nil {
+		log.Println("NIL OH NOES")
 		return results
 	}
 	names := re.SubexpNames()
