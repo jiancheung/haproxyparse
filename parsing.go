@@ -135,7 +135,6 @@ func getMatchedSubexpr(re *regexp.Regexp, toMatch string) map[string]string {
 	results := map[string]string{}
 	matches := re.FindStringSubmatch(toMatch)
 	if matches == nil {
-		log.Println("NIL OH NOES")
 		return results
 	}
 	names := re.SubexpNames()
