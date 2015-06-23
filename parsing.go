@@ -55,14 +55,14 @@ var LogLineRegex = regexp.MustCompile(
 		`""\s""\s` +
 		`(?P<clientport>\d+)\s` + //%Cp
 		`(?P<milliseconds>\d+)\s` + //%ms
-		`(?P<frontend>\S+)\s` + //%ft
-		`(?P<backend>\S+)\s` + //%b
-		`(?P<server>\S+)\s` + //%s
+		`"(?P<frontend>\S*?)"\s` + //%ft
+		`"(?P<backend>\S*?)"\s` + //%b
+		`"(?P<server>\S*?)"\s` + //%s
 		`(?P<timesend>[\d-]+)\s(?P<timewait>[\d-]+)\s(?P<timeconnection>[\d-]+)\s(?P<timeresponse>[\d-]+)\s(?P<timetotal>[\d-]+)\s` + //%Tq %Tw %Tc %Tr %Tt
 		`(?P<terminationstate>\S+)\s` + //%tsc
 		`(?P<activeconnections>\d+)\s(?P<frontendconnections>\d+)\s(?P<backendconnections>\d+)\s(?P<serverconnections>\d+)\s(?P<retries>\d+)\s` + //%ac %fc %bc %sc %rc
 		`(?P<serverqueue>\d+)\s(?P<backendqueue>\d+)\s` + //%sq %bq
-		`(?P<requestcookie>\S+)\s(?P<responsecookie>\S+)\s` + //%cc %cs
+		`"(?P<requestcookie>\S*?)"\s"(?P<responsecookie>\S*?)"\s` + //%cc %cs
 		`"(?P<xforward>.*?)"\s"(?P<useragent>.*?)"\s"(?P<authheader>.*?)"` + // custom
 		`$`)
 
@@ -71,7 +71,6 @@ const DateFormat = "02/Jan/2006:15:04:05 -0700"
 func parseLine(logLine string) (HAProxyLogLine, error) {
 	matches := getMatchedSubexpr(LogLineRegex, logLine)
 	parsed := HAProxyLogLine{}
-	log.Println(matches)
 	// gotta be an easier way...
 	parsed.ProcessId = valOrEmpty(matches, "pid")
 	parsed.ClientIp = valOrEmpty(matches, "clientip")
