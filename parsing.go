@@ -64,7 +64,7 @@ var LogLineRegex = regexp.MustCompile(
 		`(?P<serverqueue>\d+)\s(?P<backendqueue>\d+)\s` + //%sq %bq
 		`"(?P<requestcookie>\S*?)"\s"(?P<responsecookie>\S*?)"\s` + //%cc %cs
 		`"(?P<xforward>.*?)"\s"(?P<useragent>.*?)"\s"(?P<authheader>.*?)"` + // custom
-		`$`)
+		`\s*$`)
 
 const DateFormat = "02/Jan/2006:15:04:05 -0700"
 
